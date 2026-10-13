@@ -85,6 +85,8 @@ verify_*.py
 
 # ignore static files
 static/
+# GitHub Pages 构建产物（deploy-pages.yml 在 CI 生成，不应提交）
+/pages-dist/
 /apps/dsa-desktop/dist/
 /apps/dsa-desktop/node_modules/
 /node_modules/
