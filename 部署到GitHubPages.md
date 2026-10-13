@@ -138,3 +138,31 @@ Pages 上没有后端,界面会是空的。两条路:
 自选股可通过仓库 Secret `STOCK_LIST`(如 `600519,300750`)设置。
 
 > 具体 secret 名称清单见 `docs/DEPLOY.md` 的 "GitHub Actions 部署" 一节。
+
+#### B-1 开箱即用清单(已按你的 DeepSeek 方案核对过 workflow 源码)
+
+`00-daily-analysis.yml` 已校验通过(YAML OK;1 个 job `analyze`;8 个步骤;
+周一至周五 UTC 10:00 = 北京 18:00 自动跑;支持手动 Run workflow)。
+
+你只需在 **Settings → Secrets and variables → Actions** 加下列条目
+(**名称照抄,值你自己填,我不需要知道内容**):
+
+| 类型 | Name | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| Secret | `DEEPSEEK_API_KEY` | ✅ | workflow 第 118 行已映射,填你控制台里那串 `sk-...` |
+| Secret | `WECHAT_WEBHOOK_URL` | ✅(或下述任一) | 第 332 行;也可换 `FEISHU_WEBHOOK_URL` / `PUSHPLUS_TOKEN` / `SERVERCHAN3_SENDKEY` / `EMAIL_SENDER`+`EMAIL_PASSWORD` |
+| Variable 或 Secret | `STOCK_LIST` | ✅ | 例如 `600519,300750,002594` |
+
+**已知坑(重要)**:该 job 顶部写了 `environment: STOCK_LIST`(workflow 第 36 行)。
+如果运行时报环境相关错误,去 **Settings → Environments** 新建一个名为 `STOCK_LIST` 的环境即可
+(不需要在里面再配任何密钥)。
+
+#### B-2 手动跑一次验证
+
+1. 打开仓库 **Actions** 标签
+2. 左侧选 **每日股票分析**
+3. 右侧 **Run workflow** → `mode` 选 `full` → Run
+4. 跑完可在 Artifacts 下载 `analysis-reports-*`,同时通知渠道会收到推送
+
+> 注意:云端 runner 用的是 `ubuntu-latest`,**不会**执行任何本地回测,也不会碰你本机的文件;
+> 报告存在 GitHub 上,和本地部署互不影响。
