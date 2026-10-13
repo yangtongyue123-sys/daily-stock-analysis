@@ -1,0 +1,72 @@
+name: Deploy Web UI to GitHub Pages
+
+# 只构建并发布前端静态资源(static UI)。
+# 注意：GitHub Pages 只能托管静态文件，本项目的 Python 分析后端无法运行。
+# 因此页面能打开，但页面内所有 /api/* 请求会失败，除非通过 VITE_API_URL 指向自建后端。
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/dsa-web/**'
+      - '.github/workflows/deploy-pages.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/dsa-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: apps/dsa-web
+        run: npm ci
+
+      - name: Build static UI (relative base for project Pages)
+        working-directory: apps/dsa-web
+        env:
+          # 可选：仓库 Variables 里设置 VITE_API_URL 指向自建后端(例如 https://api.example.com)。
+          # 留空 = 同源请求；Pages 上没有后端时界面可打开但数据请求会失败。
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: npm run build -- --base=./ --outDir=../../pages-dist
+
+      - name: SPA fallback + disable Jekyll
+        run: |
+          cp pages-dist/index.html pages-dist/404.html
+          touch pages-dist/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
